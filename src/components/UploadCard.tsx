@@ -9,6 +9,49 @@ import z from "zod";
 import { Field, FieldError, FieldGroup, FieldLabel } from "./ui/field";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
+import { Check, Copy, RefreshCw } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
+
+const passwordCharacters = {
+  uppercase: "ABCDEFGHJKLMNPQRSTUVWXYZ",
+  lowercase: "abcdefghijkmnopqrstuvwxyz",
+  numbers: "23456789",
+  special: "!@#$%&?*",
+};
+
+function secureRandomIndex(length: number) {
+  const maximum = Math.floor(256 / length) * length;
+  const randomValue = new Uint8Array(1);
+
+  do {
+    crypto.getRandomValues(randomValue);
+  } while (randomValue[0] >= maximum);
+
+  return randomValue[0] % length;
+}
+
+function generateSecurePassword(length = 20) {
+  const characterGroups = Object.values(passwordCharacters);
+  const allCharacters = characterGroups.join("");
+  const password = characterGroups.map(
+    (characters) => characters[secureRandomIndex(characters.length)],
+  );
+
+  while (password.length < length) {
+    password.push(allCharacters[secureRandomIndex(allCharacters.length)]);
+  }
+
+  for (let index = password.length - 1; index > 0; index -= 1) {
+    const swapIndex = secureRandomIndex(index + 1);
+    [password[index], password[swapIndex]] = [
+      password[swapIndex],
+      password[index],
+    ];
+  }
+
+  return password.join("");
+}
 
 export default function UploadCard() {
   return (
@@ -84,10 +127,12 @@ const formSchema = z.object({
 });
 
 function UploadForm() {
+  const [initialPassword] = useState(generateSecurePassword);
+  const [passwordCopied, setPasswordCopied] = useState(false);
   const form = useForm({
     defaultValues: {
       file: {} as File,
-      password: "",
+      password: initialPassword,
     },
     validators: {
       onSubmit: formSchema,
@@ -136,21 +181,70 @@ function UploadForm() {
             const isInvalid =
               field.state.meta.isTouched && !field.state.meta.isValid;
 
+            const copyPassword = async () => {
+              if (!field.state.value) return;
+
+              try {
+                await navigator.clipboard.writeText(field.state.value);
+                setPasswordCopied(true);
+                toast.success("Passwort wurde kopiert.");
+                window.setTimeout(() => setPasswordCopied(false), 2000);
+              } catch {
+                toast.error("Passwort konnte nicht kopiert werden.");
+              }
+            };
+
             return (
               <Field data-invalid={isInvalid}>
                 <FieldLabel htmlFor={field.name}>Passwort</FieldLabel>
-                <Input
-                  required
-                  type="password"
-                  id={field.name}
-                  name={field.name}
-                  value={field.state.value}
-                  onBlur={field.handleBlur}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                  aria-invalid={isInvalid}
-                  placeholder="Passwort"
-                  autoComplete="off"
-                />
+                <div className="flex min-w-0">
+                  <Input
+                    required
+                    type="text"
+                    id={field.name}
+                    name={field.name}
+                    value={field.state.value}
+                    onBlur={field.handleBlur}
+                    onChange={(e) => {
+                      setPasswordCopied(false);
+                      field.handleChange(e.target.value);
+                    }}
+                    aria-invalid={isInvalid}
+                    placeholder="Passwort"
+                    autoComplete="new-password"
+                    className="min-w-0 rounded-r-none font-mono"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="rounded-none border-l-0"
+                    disabled={!field.state.value}
+                    onClick={copyPassword}
+                    aria-label="Passwort kopieren"
+                    title="Passwort kopieren"
+                  >
+                    {passwordCopied ? <Check /> : <Copy />}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="rounded-l-none border-l-0"
+                    onClick={() => {
+                      setPasswordCopied(false);
+                      field.handleChange(generateSecurePassword());
+                    }}
+                    aria-label="Sicheres Passwort erzeugen"
+                    title="Sicheres Passwort erzeugen"
+                  >
+                    <RefreshCw />
+                  </Button>
+                </div>
+                <p className="text-muted-foreground text-sm">
+                  Das Passwort wird sichtbar angezeigt und kann direkt kopiert
+                  werden.
+                </p>
                 {isInvalid && <FieldError errors={field.state.meta.errors} />}
               </Field>
             );
