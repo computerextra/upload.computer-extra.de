@@ -5,10 +5,10 @@ import "@/index.css";
 import { BrowserRouter, Routes, Route } from "react-router";
 import Layout from "./Layout";
 
-const App = lazy(() => import("@/App.tsx"));
-const Success = lazy(() => import("@/Success.tsx"));
-const Fail = lazy(() => import("@/Fail.tsx"));
-const Download = lazy(() => import("@/Download.tsx"));
+export const App = lazy(() => import("@/App.tsx"));
+export const Success = lazy(() => import("@/Success.tsx"));
+export const Fail = lazy(() => import("@/Fail.tsx"));
+export const Download = lazy(() => import("@/Download.tsx"));
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
