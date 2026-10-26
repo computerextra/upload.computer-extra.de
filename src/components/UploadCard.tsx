@@ -161,7 +161,6 @@ function UploadForm() {
                   type="file"
                   id={field.name}
                   name={field.name}
-                  value={field.state.value.name}
                   onBlur={field.handleBlur}
                   onChange={(e) =>
                     field.handleChange(
